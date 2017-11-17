@@ -63,11 +63,11 @@ class RdfEntityConsumer implements EntityConsumer
 	{
 		data.entrySet()
 			.stream()
-			.flatMap(entry -> createStatements(valueFactory, attributesMap.get(entry.getKey()), entry.getValue()))
+			.flatMap(entry -> createStatements(attributesMap.get(entry.getKey()), entry.getValue()))
 			.forEach(consumer);
 	}
 
-	private Stream<Statement> createStatements(ValueFactory valueFactory, Attribute attribute, String value)
+	private Stream<Statement> createStatements(Attribute attribute, String value)
 	{
 		Set<Tag> tags = attribute.getTags();
 

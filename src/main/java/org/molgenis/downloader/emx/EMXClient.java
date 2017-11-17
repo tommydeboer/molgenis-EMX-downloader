@@ -1,5 +1,6 @@
 package org.molgenis.downloader.emx;
 
+import org.molgenis.downloader.ExporterImpl;
 import org.molgenis.downloader.api.EMXBackend;
 import org.molgenis.downloader.api.EntityConsumer;
 import org.molgenis.downloader.api.MetadataConsumer;
@@ -17,21 +18,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class EMXClient implements AutoCloseable
+public class EMXClient extends ExporterImpl
 {
 
 	private static final String XLSX = ".xlsx";
 	private static final String XLS = ".xls";
-	private final MolgenisClient molgenisClient;
-	private final List<Exception> exceptions;
 
 	public EMXClient(final MolgenisClient client)
 	{
-		this.molgenisClient = client;
-		this.exceptions = new ArrayList<>();
+		super(client);
 	}
 
-	public boolean downloadEMX(final List<String> entities, final Path path, final boolean includeMetadata,
+	public boolean export(final List<String> entities, final Path path, final boolean includeMetadata,
 			boolean overwrite, MolgenisVersion version, Integer pageSize) throws Exception
 	{
 		try (final EMXBackend backend = createBackend(path, overwrite))
@@ -64,11 +62,6 @@ public class EMXClient implements AutoCloseable
 		}
 	}
 
-	public List<Exception> getExceptions()
-	{
-		return exceptions;
-	}
-
 	private EMXBackend createBackend(final Path path, boolean overwrite) throws IOException, URISyntaxException
 	{
 		final EMXBackend backend;
@@ -78,7 +71,7 @@ public class EMXClient implements AutoCloseable
 		}
 		else
 		{
-			boolean fileExists = Files.exists(path);
+			boolean fileExists = path.toFile().exists();
 			if (!fileExists || overwrite)
 			{
 				if (fileExists)
@@ -94,10 +87,5 @@ public class EMXClient implements AutoCloseable
 			}
 		}
 		return backend;
-	}
-
-	@Override
-	public void close() throws Exception
-	{
 	}
 }

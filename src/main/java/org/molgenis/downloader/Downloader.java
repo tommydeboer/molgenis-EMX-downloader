@@ -9,6 +9,7 @@ import org.molgenis.downloader.api.metadata.MolgenisVersion;
 import org.molgenis.downloader.client.HttpClientFactory;
 import org.molgenis.downloader.client.MolgenisRestApiClient;
 import org.molgenis.downloader.emx.EMXClient;
+import org.molgenis.downloader.rdf.RdfClient;
 
 import java.io.File;
 import java.net.URI;
@@ -137,25 +138,24 @@ public class Downloader
 				}
 				molgenis.login(username, password, socketTimeout);
 			}
-			try (final EMXClient emxClient = new EMXClient(molgenis))
+			//TODO: toggle Exporter implementation depending on export format option
+			Exporter exporter = new RdfClient(molgenis);
+			MolgenisVersion version;
+			if (versionString != null)
 			{
-				MolgenisVersion version;
-				if (versionString != null)
-				{
-					version = MolgenisVersion.from(versionString);
-				}
-				else
-				{
-					version = molgenis.getVersion();
-				}
+				version = MolgenisVersion.from(versionString);
+			}
+			else
+			{
+				version = molgenis.getVersion();
+			}
 
-				boolean hasErrors = emxClient.downloadEMX(entities, Paths.get(outFile.getPath()), includeMetaData,
-						overwrite, version, pageSize);
-				if (hasErrors)
-				{
-					writeToConsole("Errors occurred while writing EMX\n");
-					emxClient.getExceptions().forEach(ex -> writeToConsole("Exception: %s\n", ex));
-				}
+			boolean hasErrors = exporter.export(entities, Paths.get(outFile.getPath()), includeMetaData,
+					overwrite, version, pageSize);
+			if (hasErrors)
+			{
+				writeToConsole("Errors occurred while writing EMX\n");
+				exporter.getExceptions().forEach(ex -> writeToConsole("Exception: %s\n", ex));
 			}
 		}
 	}

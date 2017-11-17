@@ -49,7 +49,7 @@ class MetadataFilter implements MetadataConsumer
 						 .stream()
 						 .filter(ent -> !entities.contains(ent.getId()))
 						 .filter(ent -> !ent.isAbstractClass())
-						 .map(entity -> entity.getFullName())
+						 .map(Entity::getFullName)
 						 .collect(toList());
 		}
 	}
