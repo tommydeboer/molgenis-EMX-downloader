@@ -1,6 +1,7 @@
 package org.molgenis.downloader;
 
 import org.molgenis.downloader.api.metadata.MolgenisVersion;
+import org.molgenis.downloader.client.IncompleteMetadataException;
 
 import java.nio.file.Path;
 import java.util.List;

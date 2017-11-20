@@ -4,12 +4,14 @@ import joptsimple.OptionException;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import org.apache.http.client.HttpClient;
+import org.eclipse.rdf4j.repository.Repository;
 import org.molgenis.downloader.api.MolgenisClient;
 import org.molgenis.downloader.api.metadata.MolgenisVersion;
 import org.molgenis.downloader.client.HttpClientFactory;
 import org.molgenis.downloader.client.MolgenisRestApiClient;
-import org.molgenis.downloader.emx.EMXClient;
-import org.molgenis.downloader.rdf.RdfClient;
+import org.molgenis.downloader.rdf.RdfBackend;
+import org.molgenis.downloader.rdf.RdfExporter;
+import org.molgenis.rdf.RdfTemplate;
 
 import java.io.File;
 import java.net.URI;
@@ -138,8 +140,6 @@ public class Downloader
 				}
 				molgenis.login(username, password, socketTimeout);
 			}
-			//TODO: toggle Exporter implementation depending on export format option
-			Exporter exporter = new RdfClient(molgenis);
 			MolgenisVersion version;
 			if (versionString != null)
 			{
@@ -150,13 +150,22 @@ public class Downloader
 				version = molgenis.getVersion();
 			}
 
-			boolean hasErrors = exporter.export(entities, Paths.get(outFile.getPath()), includeMetaData,
-					overwrite, version, pageSize);
-			if (hasErrors)
+			RdfBackend backend = new RdfBackend();
+			Repository repository = backend.createRepository(Paths.get(outFile.getPath()));
+			RdfTemplate template = new RdfTemplate(repository);
+			RdfExporter exporter = new RdfExporter(molgenis, template);
+			if (overwrite)
 			{
-				writeToConsole("Errors occurred while writing EMX\n");
-				exporter.getExceptions().forEach(ex -> writeToConsole("Exception: %s\n", ex));
+				exporter.clear();
 			}
+			exporter.addNamespaces();
+			exporter.exportData(entities, pageSize, version);
+			//			boolean hasErrors =
+			//			if (hasErrors)
+			//			{
+			//				writeToConsole("Errors occurred while writing EMX\n");
+			//				exporter.getExceptions().forEach(ex -> writeToConsole("Exception: %s\n", ex));
+			//			}
 		}
 	}
 }

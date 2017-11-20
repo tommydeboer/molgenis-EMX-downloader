@@ -9,14 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-public interface EntityConsumer extends AutoCloseable, Consumer<Map<String, String>>
+public interface EntityConsumer extends Consumer<Map<String, String>>
 {
-	@Override
-	default void close() throws Exception
-	{
-
-	}
-
 	default List<Attribute> getParts(final Attribute compound)
 	{
 		List<Attribute> atts = new ArrayList<>();

@@ -1,4 +1,4 @@
-package org.molgenis.downloader.emx;
+package org.molgenis.downloader.client;
 
 import org.molgenis.downloader.api.MetadataRepository;
 import org.molgenis.downloader.api.metadata.*;
@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 
 import static org.molgenis.downloader.api.metadata.MolgenisVersion.VERSION_3;
 
-class FilteredMetadataRepository implements MetadataRepository
+public class FilteredMetadataRepository implements MetadataRepository
 {
 
 	private final Set<Entity> entities;
@@ -18,25 +18,14 @@ class FilteredMetadataRepository implements MetadataRepository
 	private final Set<Tag> tags;
 	private final Collection<Language> languages;
 
-	public FilteredMetadataRepository(final MetadataRepository source, final List<String> entities,
-			MolgenisVersion version)
+	public FilteredMetadataRepository(final MetadataRepository source, final List<String> entities)
 	{
 		this.entities = new LinkedHashSet<>();
 		attributes = new LinkedHashSet<>();
 		packages = new LinkedHashSet<>();
 		tags = new LinkedHashSet<>();
 		languages = source.getLanguages();
-		if (version.smallerThan(VERSION_3))
-		{
-			source.getEntities().stream().filter((ent) -> entities.contains(ent.getFullName())).forEach(this::traverse);
-		}
-		else
-		{
-			source.getEntities()
-				  .stream()
-				  .filter(entity -> entities.contains(entity.getFullName()))
-				  .forEach(this::traverse);
-		}
+		source.getEntities().stream().filter(entity -> entities.contains(entity.getFullName())).forEach(this::traverse);
 	}
 
 	private void traverse(final Entity entity)
