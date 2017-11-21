@@ -1,10 +1,10 @@
 package org.molgenis.downloader.emx;
 
-import org.molgenis.downloader.ExporterImpl;
-import org.molgenis.downloader.api.*;
-import org.molgenis.downloader.api.metadata.Entity;
+import org.molgenis.downloader.api.EMXBackend;
+import org.molgenis.downloader.api.EntityConsumer;
+import org.molgenis.downloader.api.MetadataConsumer;
+import org.molgenis.downloader.api.MolgenisClient;
 import org.molgenis.downloader.api.metadata.MolgenisVersion;
-import org.molgenis.downloader.client.EntityFilter;
 import org.molgenis.downloader.emx.excel.ExcelBackend;
 import org.molgenis.downloader.emx.tsv.ZipFileBackend;
 
@@ -15,74 +15,59 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.toList;
-
-public class EMXClient extends ExporterImpl
+public class EMXClient implements AutoCloseable
 {
 
 	private static final String XLSX = ".xlsx";
 	private static final String XLS = ".xls";
+	private final MolgenisClient molgenisClient;
+	private final List<Exception> exceptions;
 
 	public EMXClient(final MolgenisClient client)
 	{
-		super(client);
+		this.molgenisClient = client;
+		this.exceptions = new ArrayList<>();
 	}
 
-	public boolean export(final List<String> entities, final Path path, final boolean includeMetadata,
+	public boolean downloadEMX(final List<String> entities, final Path path, final boolean includeMetadata,
 			boolean overwrite, MolgenisVersion version, Integer pageSize) throws Exception
 	{
 		try (final EMXBackend backend = createBackend(path, overwrite))
 		{
 			final EMXFileWriter writer = new EMXFileWriter(backend, version);
-			List<String> target = entities;
+			List<String> target = new ArrayList<>(entities);
 			if (includeMetadata)
 			{
-				MetadataRepository filteredMetadata = molgenisClient.getFilteredMetadata(version, entities);
-				writeMetadata(writer, filteredMetadata);
-				target = getDatasheets(entities, version, filteredMetadata);
+				try (final MetadataConsumer consumer = writer.createMetadataConsumer())
+				{
+					final MetadataFilter filter = new MetadataFilter(entities, consumer, version);
+					molgenisClient.streamMetadata(filter, version);
+					target.addAll(filter.getIncludedEntities());
+					target = target.stream().distinct().collect(Collectors.toList());
+				}
 			}
 			for (final String name : target)
 			{
-				writeData(pageSize, writer, name);
+				try
+				{
+					EntityConsumer consumer = writer.createConsumerForEntity(molgenisClient.getEntity(name));
+					molgenisClient.streamEntityData(name, consumer, pageSize);
+				}
+				catch (final org.json.JSONException ex)
+				{
+					writer.addException(new IllegalArgumentException("entity: " + name + " does not exist", ex));
+				}
 			}
 			exceptions.addAll(writer.getExceptions());
 			return writer.hasExceptions();
 		}
 	}
 
-	private void writeMetadata(EMXFileWriter writer, MetadataRepository filteredMetadata) throws Exception
+	public List<Exception> getExceptions()
 	{
-		try (final MetadataConsumer consumer = writer.createMetadataConsumer())
-		{
-			consumer.accept(filteredMetadata);
-		}
-	}
-
-	private void writeData(Integer pageSize, EMXFileWriter writer, String name) throws Exception
-	{
-		final EntityConsumer consumer = writer.createConsumerForEntity(molgenisClient.getEntity(name));
-		try
-		{
-			molgenisClient.streamEntityData(name, consumer, pageSize);
-		}
-		catch (final org.json.JSONException ex)
-		{
-			writer.addException(new IllegalArgumentException("entity: " + name + " does not exist", ex));
-		}
-	}
-
-	private List<String> getDatasheets(List<String> entities, MolgenisVersion version,
-			MetadataRepository filteredMetadata)
-	{
-		EntityFilter filter = new EntityFilter(entities, version);
-		return filteredMetadata.getEntities()
-							   .stream()
-							   .filter(filter::isIncluded)
-							   .filter(ent -> !ent.isAbstractClass())
-							   .map(Entity::getFullName)
-							   .distinct()
-							   .collect(toList());
+		return exceptions;
 	}
 
 	private EMXBackend createBackend(final Path path, boolean overwrite) throws IOException, URISyntaxException
@@ -110,5 +95,10 @@ public class EMXClient extends ExporterImpl
 			}
 		}
 		return backend;
+	}
+
+	@Override
+	public void close() throws Exception
+	{
 	}
 }

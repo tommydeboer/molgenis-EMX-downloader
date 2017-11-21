@@ -12,10 +12,7 @@ import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.molgenis.downloader.api.EntityConsumer;
-import org.molgenis.downloader.api.MetadataRepository;
-import org.molgenis.downloader.api.MolgenisClient;
-import org.molgenis.downloader.api.WriteableMetadataRepository;
+import org.molgenis.downloader.api.*;
 import org.molgenis.downloader.api.metadata.Attribute;
 import org.molgenis.downloader.api.metadata.DataType;
 import org.molgenis.downloader.api.metadata.Entity;
@@ -176,6 +173,26 @@ public class MolgenisRestApiClient implements MolgenisClient
 	}
 
 	@Override
+	public void streamMetadata(MetadataConsumer consumer, MolgenisVersion version)
+	{
+		try
+		{
+			if (converter == null) initConverter(version);
+			streamEntityData(converter.getLanguagesRepositoryName(), converter::toLanguage);
+			streamEntityData(converter.getTagsRepositoryName(), converter::toTag);
+			streamEntityData(converter.getPackagesRepositoryName(), converter::toPackage);
+			streamEntityData(converter.getAttributesRepositoryName(), converter::toAttribute);
+			streamEntityData(converter.getEntitiesRepositoryName(), converter::toEntity);
+			converter.postProcess(repository);
+			consumer.accept(repository);
+		}
+		catch (Exception ex)
+		{
+			writeToConsole("An error occurred:\n", ex);
+		}
+	}
+
+	@Override
 	public MetadataRepository getMetadata(MolgenisVersion version) throws IncompleteMetadataException
 	{
 		try
@@ -194,13 +211,6 @@ public class MolgenisRestApiClient implements MolgenisClient
 			writeToConsole("An error occurred:\n", ex);
 			throw new IncompleteMetadataException(ex);
 		}
-	}
-
-	@Override
-	public MetadataRepository getFilteredMetadata(MolgenisVersion version, List<String> entities)
-			throws IncompleteMetadataException
-	{
-		return new FilteredMetadataRepository(getMetadata(version), entities);
 	}
 
 	@Override
