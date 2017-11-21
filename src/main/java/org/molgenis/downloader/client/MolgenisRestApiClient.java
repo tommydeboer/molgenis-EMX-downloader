@@ -123,34 +123,11 @@ public class MolgenisRestApiClient implements MolgenisClient
 	}
 
 	@Override
-	public Entity getEntity(final String name)
+	public Entity getEntity(final String name) throws IOException, URISyntaxException
 	{
-		return repository.getEntities()
-						 .stream()
-						 .filter(entity -> entity.getFullName().equals(name))
-						 .findFirst()
-						 .orElseGet(() -> getEntityFromServer(name));
-	}
-
-	private Entity getEntityFromServer(String name)
-	{
-		final JSONObject json;
-		try
-		{
-			// TODO: escape # character
-			json = getJsonDataFromUrl(uri + "/api/v2/" + name + "?num=1");
-			final JSONObject meta = json.getJSONObject("meta");
-			return entityFromJSON(meta);
-		}
-		catch (IOException e)
-		{
-			throw new IllegalArgumentException("Entity with name " + name + " not found");
-		}
-		catch (URISyntaxException e)
-		{
-			throw new IllegalStateException("Shouldn't happen");
-		}
-
+		final JSONObject json = getJsonDataFromUrl(uri + "/api/v2/" + name + "?num=1");
+		final JSONObject meta = json.getJSONObject("meta");
+		return entityFromJSON(meta);
 	}
 
 	@Override
