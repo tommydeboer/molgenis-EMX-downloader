@@ -1,13 +1,13 @@
 package org.molgenis.downloader.rdf;
 
 import com.google.common.collect.ImmutableList;
-import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.FOAF;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.mockito.*;
 import org.mockito.quality.Strictness;
 import org.molgenis.downloader.api.EntityConsumer;
+import org.molgenis.downloader.api.MetadataRepository;
 import org.molgenis.downloader.api.MolgenisClient;
 import org.molgenis.downloader.api.metadata.Entity;
 import org.molgenis.downloader.api.metadata.MolgenisVersion;
@@ -41,11 +41,12 @@ public class RdfExporterTest
 	private Entity biobanks;
 	@Mock
 	private MolgenisVersion molgenisVersion;
+	@Mock
+	private MetadataRepository metadataRepository;
 	@Captor
 	private ArgumentCaptor<ConnectionCallback> connectionCallbackCaptor;
 	private Integer pageSize = 101;
 	private MockitoSession mockitoSession;
-	private SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
 
 	@BeforeMethod
 	public void beforeMethod() throws URISyntaxException
@@ -75,11 +76,13 @@ public class RdfExporterTest
 	@Test
 	public void testExportData() throws Exception
 	{
+		doReturn(metadataRepository).when(molgenisClient).getMetadata(molgenisVersion);
+		doReturn(biobanks).when(metadataRepository).getEntity("bbmri_nl_biobanks");
+		doReturn(samples).when(metadataRepository).getEntity("bbmri_nl_sample_collections");
+
 		doNothing().when(rdfTemplate).execute(connectionCallbackCaptor.capture());
 		doReturn("bbmri_nl_biobanks").when(biobanks).getFullName();
 		doReturn("bbmri_nl_sample_collections").when(samples).getFullName();
-		doReturn(biobanks).when(molgenisClient).getEntity("bbmri_nl_biobanks");
-		doReturn(samples).when(molgenisClient).getEntity("bbmri_nl_sample_collections");
 		doReturn(entityConsumer).when(consumerFactory).apply(biobanks, repositoryConnection);
 		doReturn(entityConsumer).when(consumerFactory).apply(samples, repositoryConnection);
 

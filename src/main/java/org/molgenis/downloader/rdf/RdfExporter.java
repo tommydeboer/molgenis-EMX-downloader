@@ -77,15 +77,9 @@ public class RdfExporter
 			throws IOException, URISyntaxException, IncompleteMetadataException
 	{
 		MetadataRepository metadata = molgenisClient.getMetadata(molgenisVersion);
-		for (String entityId : entities)
+		for (String fullName : entities)
 		{
-			Entity entity = metadata.getEntities()
-									.stream()
-									.filter(candidate -> candidate.getFullName().equals(entityId))
-									.findFirst()
-									.orElseThrow(() -> new IllegalArgumentException(
-											"Entity with id " + entityId + " not found"));
-			exportEntity(entity, pageSize);
+			exportEntity(metadata.getEntity(fullName), pageSize);
 		}
 	}
 
@@ -99,5 +93,4 @@ public class RdfExporter
 	{
 		template.execute(RepositoryConnection::clear);
 	}
-
 }
